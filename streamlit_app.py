@@ -13,13 +13,15 @@ if uploaded_file:
     orig_width, orig_height = image.size
     st.write(f"Original size: {orig_width} × {orig_height} pixels")
 
-    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Ratio"])
+    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Pixel Size"])
     if size_mode == "Original Size":
         width, height = orig_width, orig_height
     else:
-        ratio = st.slider("Select pixelation ratio (smaller = more pixelated)", min_value=0.05, max_value=1.0, value=0.1, step=0.01)
-        width = max(1, int(orig_width * ratio))
-        height = max(1, int(orig_height * ratio))
+        pixel_size = st.slider("Select pixel size (number of pixels for width)", min_value=4, max_value=min(orig_width, 128), value=32, step=1)
+        # Maintain aspect ratio
+        aspect_ratio = orig_height / orig_width
+        width = pixel_size
+        height = max(1, int(pixel_size * aspect_ratio))
         st.write(f"Pixelated size: {width} × {height}")
 
     color_format = st.selectbox("Color Format", ["HEX", "RGB", "Excel_Color"])
