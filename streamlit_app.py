@@ -1,141 +1,68 @@
 import streamlit as st
-import streamlit.components.v1 as components
-import numpy as np
-import cv2
 from PIL import Image
-import csv
-import os
 import pandas as pd
+import numpy as np
+import io
 
 st.title("🧱 Image to Pixel Art CSV Converter")
 
-class Converter():
-    def __init__(self) -> None:
-        self.color_dict = {}
+# Upload image
+uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "bmp", "tiff", "gif"])
+if uploaded_file:
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Original Image", use_container_width=True)
+    orig_width, orig_height = image.size
+    st.write(f"Original size: {orig_width} × {orig_height} pixels")
 
-    def mosaic(self, img, ratio=0.1):
-        small = cv2.resize(img, None, fx=ratio, fy=ratio, interpolation=cv2.INTER_NEAREST)
-        return cv2.resize(small, img.shape[:2][::-1], interpolation=cv2.INTER_NEAREST)
+    # Canvas size mode
+    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Size"])
+    if size_mode == "Original Size":
+        width, height = orig_width, orig_height
+    else:
+        width = st.number_input("Canvas Width", min_value=1, max_value=500, value=32)
+        height = st.number_input("Canvas Height", min_value=1, max_value=500, value=32)
 
-    def read_csv(self, path):
-        with open(path) as f:
-            reader = csv.reader(f)
-            color = [[int(v) for v in row] for row in reader]
-            return color
+    # Color format
+    color_format = st.selectbox("Color Format", ["HEX", "RGB", "Excel_Color"])
 
-    def color_change(self, r, g, b, color_pallet):
-        if (r, g, b) in self.color_dict:
-            return self.color_dict[(r, g, b)]
-        # 最も近い色を見つける
-        min_distance = float('inf')
-        color_name = None
-        for color in color_pallet:
-            distance = (int(r) - color[0]) ** 2 + (int(g) - color[1]) ** 2 + (int(b) - color[2]) ** 2
-            if distance < min_distance:
-                min_distance = distance
-                color_name = color
-        self.color_dict[(r, g, b)] = color_name
-        return color_name
-
-    def convert(self, img, option, custom=None):
-        w, h = img.shape[:2]
-        changed = img.copy()
-        # 選択されたcsvファイルを読み込む
-        color_pallet = []
-        if option != "Custom":
-            color_pallet = self.read_csv("./color/"+option+".csv")
+    # Generate pixel art
+    if st.button("Generate Preview"):
+        if size_mode == "Original Size":
+            processed_image = image.copy()
         else:
-            if custom == [] or custom == None:
-                return
-            color_pallet = custom
+            processed_image = image.resize((width, height), Image.NEAREST)
 
-        for height in range(h):
-            for width in range(w):
-                color = self.color_change(img[width][height][0], img[width][height][1], img[width][height][2], color_pallet)
-                changed[width][height][0] = color[0]  # 赤
-                changed[width][height][1] = color[1]  # 緑
-                changed[width][height][2] = color[2]  # 青
-        return changed
+        # Preview (scaled up for small images)
+        preview_scale = min(12, max(1, 350 // max(width, height)))
+        preview_img = processed_image.resize((width * preview_scale, height * preview_scale), Image.NEAREST)
+        st.image(preview_img, caption=f"Pixel Art Preview ({width}×{height})", use_container_width=True)
 
-    def decreaseColor(self, img):
-        dst = img.copy()
+        # Prepare CSV data
+        img_array = np.array(processed_image)
+        data = []
+        if color_format == "RGB":
+            for y in range(height):
+                row = [f"{r},{g},{b}" for r, g, b in img_array[y]]
+                data.append(row)
+        elif color_format == "HEX":
+            for y in range(height):
+                row = [f"#{r:02X}{g:02X}{b:02X}" for r, g, b in img_array[y]]
+                data.append(row)
+        elif color_format == "Excel_Color":
+            def rgb_to_excel_color(r, g, b):
+                return b << 16 | g << 8 | r
+            for y in range(height):
+                row = [str(rgb_to_excel_color(r, g, b)) for r, g, b in img_array[y]]
+                data.append(row)
 
-        idx = np.where((0 <= img) & (64 > img))
-        dst[idx] = 32
-        idx = np.where((64 <= img) & (128 > img))
-        dst[idx] = 96
-        idx = np.where((128 <= img) & (192 > img))
-        dst[idx] = 160
-        idx = np.where((192 <= img) & (256 > img))
-        dst[idx] = 224
+        df = pd.DataFrame(data)
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False, header=False)
+        csv_bytes = csv_buffer.getvalue().encode()
 
-        return dst
-
-    def anime_filter(self, img, th1=50, th2=150):
-        # アルファチャンネルを分離
-        bgr = img[:, :, :3]
-        if len(img[0][0]) == 4:
-            alpha = img[:, :, 3]
-
-        # グレースケール変換
-        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-
-        # ぼかしでノイズ低減
-        edge = cv2.blur(gray, (3, 3))
-
-        # Cannyアルゴリズムで輪郭抽出
-        edge = cv2.Canny(edge, th1, th2, apertureSize=3)
-
-        # 輪郭画像をRGB色空間に変換
-        edge = cv2.cvtColor(edge, cv2.COLOR_GRAY2BGR)
-
-        # 差分を返す
-        result = cv2.subtract(bgr, edge)
-
-        # アルファチャンネルを結合して返す
-        if len(img[0][0]) == 4:
-            return np.dstack([result, alpha])
-        else:
-            return result
-
-class Web():
-    def __init__(self) -> None:
-        self.draw_text()
-
-    def draw_text(self):
-        st.set_page_config(
-            page_title="Pixelart-Converter",
-            page_icon="🖼️",
-            layout="centered",
-            initial_sidebar_state="expanded",
+        st.download_button(
+            label="Download CSV",
+            data=csv_bytes,
+            file_name=f"pixelart_{width}x{height}_{color_format.lower()}.csv",
+            mime="text/csv"
         )
-        st.title("PixelArt-Converter")
-        self.upload = st.file_uploader("Upload Image", type=['jpg', 'jpeg', 'png', 'webp'])
-        self.color = st.selectbox("Select color palette", ("cold","gold"))
-        self.ratio = st.slider('Select ratio', 0.01, 1.0, 0.3, 0.01)
-        self.original, self.converted = st.columns(2)
-        self.original.title("original img")
-        self.converted.title("convert img")
-        self.more_options()
-
-    def more_options(self):
-        with st.expander("More Options", True):
-            self.no_convert = st.checkbox('no color convert')
-            self.decrease = st.checkbox('decrease color')
-            self.edge_filter = st.checkbox('anime filter')
-
-if __name__ == "__main__":
-    web = Web()
-    converter = Converter()
-    if web.upload != None:
-        img = Image.open(web.upload)
-        img = np.array(img)
-        web.original.image(web.upload)
-        img = converter.mosaic(img, web.ratio)
-        if web.no_convert == False:
-            img = converter.convert(img, web.color)
-        if web.decrease:
-            img = converter.decreaseColor(img)
-        if web.edge_filter:
-            img = converter.anime_filter(img)
-        web.converted.image(img)
