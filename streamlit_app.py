@@ -6,7 +6,6 @@ import io
 
 st.title("🧱 Image to Pixel Art CSV Converter")
 
-# Upload image
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "bmp", "tiff", "gif"])
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
@@ -14,30 +13,23 @@ if uploaded_file:
     orig_width, orig_height = image.size
     st.write(f"Original size: {orig_width} × {orig_height} pixels")
 
-    # Canvas size mode
-    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Size"])
+    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Ratio"])
     if size_mode == "Original Size":
         width, height = orig_width, orig_height
     else:
-        width = st.number_input("Canvas Width", min_value=1, max_value=500, value=32)
-        height = st.number_input("Canvas Height", min_value=1, max_value=500, value=32)
+        ratio = st.slider("Select pixelation ratio (smaller = more pixelated)", min_value=0.05, max_value=1.0, value=0.1, step=0.01)
+        width = max(1, int(orig_width * ratio))
+        height = max(1, int(orig_height * ratio))
+        st.write(f"Pixelated size: {width} × {height}")
 
-    # Color format
     color_format = st.selectbox("Color Format", ["HEX", "RGB", "Excel_Color"])
 
-    # Generate pixel art
     if st.button("Generate Preview"):
-        if size_mode == "Original Size":
-            processed_image = image.copy()
-        else:
-            processed_image = image.resize((width, height), Image.NEAREST)
-
-        # Preview (scaled up for small images)
+        processed_image = image.copy() if size_mode == "Original Size" else image.resize((width, height), Image.NEAREST)
         preview_scale = min(12, max(1, 350 // max(width, height)))
         preview_img = processed_image.resize((width * preview_scale, height * preview_scale), Image.NEAREST)
         st.image(preview_img, caption=f"Pixel Art Preview ({width}×{height})", use_container_width=True)
 
-        # Prepare CSV data
         img_array = np.array(processed_image)
         data = []
         if color_format == "RGB":
