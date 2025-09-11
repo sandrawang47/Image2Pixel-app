@@ -13,21 +13,21 @@ if uploaded_file:
     orig_width, orig_height = image.size
     st.write(f"Original size: {orig_width} × {orig_height} pixels")
 
-    
-    # Only allow custom pixel size
-    st.write("Canvas Size Mode: Custom Pixel Size")
-    pixel_size = st.slider("Select pixel size (number of pixels for width)", min_value=4, max_value=min(orig_width, 128), value=32, step=1)
-    # Maintain aspect ratio
-    aspect_ratio = orig_height / orig_width
-    width = pixel_size
-    height = max(1, int(pixel_size * aspect_ratio))
-    st.write(f"Pixelated size: {width} × {height}")
-
+    size_mode = st.radio("Canvas Size Mode", ["Original Size", "Custom Pixel Size"])
+    if size_mode == "Original Size":
+        width, height = orig_width, orig_height
+    else:
+        pixel_size = st.slider("Select pixel size (number of pixels for width)", min_value=4, max_value=min(orig_width, 128), value=32, step=1)
+        # Maintain aspect ratio
+        aspect_ratio = orig_height / orig_width
+        width = pixel_size
+        height = max(1, int(pixel_size * aspect_ratio))
+        st.write(f"Pixelated size: {width} × {height}")
 
     color_format = st.selectbox("Color Format", ["HEX", "RGB", "Excel_Color"])
 
     if st.button("Generate Preview"):
-        processed_image = image.copy() if image.resize((width, height), Image.NEAREST) else image.resize((width, height), Image.NEAREST)
+        processed_image = image.copy() if size_mode == "Original Size" else image.resize((width, height), Image.NEAREST)
         preview_scale = min(12, max(1, 350 // max(width, height)))
         preview_img = processed_image.resize((width * preview_scale, height * preview_scale), Image.NEAREST)
         st.image(preview_img, caption=f"Pixel Art Preview ({width}×{height})", use_container_width=True)
