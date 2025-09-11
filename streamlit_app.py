@@ -13,7 +13,7 @@ if uploaded_file:
     orig_width, orig_height = image.size
     st.write(f"Original size: {orig_width} × {orig_height} pixels")
 
-    size_mode = st.radio("Canvas Size Mode", ["Custom Pixel Size", "Original Size"])
+    size_mode = st.radio("Canvas Size Mode", ["Custom Pixel Size - For Excel Pixel Art Tool, we recommend you select this one, and select HEX for Color Format below", "Original Size"])
     if size_mode == "Original Size":
         width, height = orig_width, orig_height
     else:
