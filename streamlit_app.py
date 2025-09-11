@@ -4,26 +4,6 @@ import pandas as pd
 import numpy as np
 import io
 from streamlit.components.v1 import html
-
-button = """
-<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="wang47" data-color="#FFDD00" data-emoji=""  data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
-"""
-
-html(button, height=70, width=220)
-
-st.markdown(
-    """
-    <style>
-        iframe[width="220"] {
-            position: fixed;
-            bottom: 60px;
-            right: 40px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 st.title("🧱 Image to Pixel Art CSV Converter")
 
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "bmp", "tiff", "gif"])
@@ -80,3 +60,22 @@ if uploaded_file:
             file_name=f"pixelart_{width}x{height}_{color_format.lower()}.csv",
             mime="text/csv"
         )
+
+button = """
+<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="wang47" data-color="#FFDD00" data-emoji=""  data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
+"""
+
+html(button, height=70, width=220)
+
+st.markdown(
+    """
+    <style>
+        iframe[width="220"] {
+            position: fixed;
+            bottom: 60px;
+            right: 40px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
