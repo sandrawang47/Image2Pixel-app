@@ -27,7 +27,7 @@ if uploaded_file:
     color_format = st.selectbox("Color Format", ["HEX", "RGB", "Excel_Color"])
 
     if st.button("Generate Preview"):
-        processed_image = image.copy() if image.resize((width, height), Image.NEAREST) else 
+        processed_image = image.copy() if image.resize((width, height), Image.NEAREST) else image.resize((width, height), Image.NEAREST)
         preview_scale = min(12, max(1, 350 // max(width, height)))
         preview_img = processed_image.resize((width * preview_scale, height * preview_scale), Image.NEAREST)
         st.image(preview_img, caption=f"Pixel Art Preview ({width}×{height})", use_container_width=True)
